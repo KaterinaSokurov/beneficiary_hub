@@ -55,7 +55,7 @@ export async function createDonation(data: CreateDonationData) {
         description: data.description,
         donation_type: data.donationType,
         category: [data.donationType.toLowerCase()],
-        items: data.items,
+        items: data.items as unknown as any,
         condition: data.condition,
         available_quantity: data.availableQuantity,
         pickup_location: data.pickupLocation,

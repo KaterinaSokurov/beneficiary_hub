@@ -50,7 +50,7 @@ export default async function AdminDonationsPage() {
     .order("created_at", { ascending: false });
 
   // Get emails from profiles for each donor
-  const donorIds = allDonations?.map(d => d.donors?.id).filter(Boolean) || [];
+  const donorIds = allDonations?.map(d => (d.donors as any)?.id).filter(Boolean) || [];
   const { data: donorProfiles } = await adminClient
     .from("profiles")
     .select("id, email")
@@ -60,8 +60,8 @@ export default async function AdminDonationsPage() {
   const donationsWithEmails = allDonations?.map(donation => ({
     ...donation,
     donors: donation.donors ? {
-      ...donation.donors,
-      email: donorProfiles?.find(p => p.id === donation.donors?.id)?.email
+      ...(donation.donors as any),
+      email: donorProfiles?.find(p => p.id === (donation.donors as any)?.id)?.email
     } : null
   }));
 
@@ -210,7 +210,7 @@ export default async function AdminDonationsPage() {
       role="admin"
       userName={profile.email}
       userEmail={profile.email}
-      pendingSchoolsCount={pendingSchools || 0}
+      pendingCount={pendingSchools || 0}
       pendingDonorsCount={pendingDonors || 0}
     >
       <div className="space-y-6">

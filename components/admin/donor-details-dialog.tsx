@@ -379,7 +379,7 @@ export function DonorDetailsDialog({
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">Registered:</span>
-              <span className="font-medium">{new Date(donor.created_at).toLocaleDateString()}</span>
+              <span className="font-medium">{donor.created_at ? new Date(donor.created_at).toLocaleDateString() : 'N/A'}</span>
             </div>
             {donor.verified_at && (
               <div className="flex items-center gap-2 text-sm">

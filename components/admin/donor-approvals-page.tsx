@@ -359,7 +359,7 @@ export function DonorApprovalsPage() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span className="text-muted-foreground">
-                              Registered: {new Date(donor.created_at).toLocaleDateString()}
+                              Registered: {donor.created_at ? new Date(donor.created_at).toLocaleDateString() : 'N/A'}
                             </span>
                           </div>
                         </div>

@@ -59,7 +59,7 @@ export default async function SchoolDashboard() {
   return (
     <DashboardLayout
       role="school"
-      userName={profile.organization_name || profile.full_name || profile.email}
+      userName={profile.full_name || profile.email}
       userEmail={profile.email}
     >
       <div className="space-y-6">

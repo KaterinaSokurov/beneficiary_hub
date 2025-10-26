@@ -51,10 +51,11 @@ interface User {
   id: string;
   email: string;
   full_name: string | null;
-  organization_name: string | null;
   role: "admin" | "approver" | "donor" | "school";
   is_active: boolean | null;
   created_at: string;
+  updated_at?: string;
+  created_by?: string | null;
 }
 
 interface UserManagementPageProps {
@@ -75,7 +76,6 @@ export function UserManagementPage({ users: initialUsers }: UserManagementPagePr
   const [enrollEmail, setEnrollEmail] = useState("");
   const [enrollFullName, setEnrollFullName] = useState("");
   const [enrollPhoneNumber, setEnrollPhoneNumber] = useState("");
-  const [enrollOrganizationName, setEnrollOrganizationName] = useState("");
   const [enrollRole, setEnrollRole] = useState<"admin" | "approver">("approver");
   const [enrollPassword, setEnrollPassword] = useState("");
 
@@ -97,8 +97,7 @@ export function UserManagementPage({ users: initialUsers }: UserManagementPagePr
       filtered = filtered.filter(
         (user) =>
           user.email.toLowerCase().includes(query) ||
-          user.full_name?.toLowerCase().includes(query) ||
-          user.organization_name?.toLowerCase().includes(query)
+          user.full_name?.toLowerCase().includes(query)
       );
     }
 
@@ -128,7 +127,6 @@ export function UserManagementPage({ users: initialUsers }: UserManagementPagePr
         password: enrollPassword,
         full_name: enrollFullName || null,
         phone_number: enrollPhoneNumber || null,
-        organization_name: enrollOrganizationName || null,
         role: enrollRole,
       });
 
@@ -142,7 +140,6 @@ export function UserManagementPage({ users: initialUsers }: UserManagementPagePr
       setEnrollEmail("");
       setEnrollFullName("");
       setEnrollPhoneNumber("");
-      setEnrollOrganizationName("");
       setEnrollPassword("");
       setEnrollRole("approver");
 
@@ -302,16 +299,6 @@ export function UserManagementPage({ users: initialUsers }: UserManagementPagePr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="enroll_organization_name">Organization Name</Label>
-                <Input
-                  id="enroll_organization_name"
-                  value={enrollOrganizationName}
-                  onChange={(e) => setEnrollOrganizationName(e.target.value)}
-                  placeholder="Organization or Department"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="enroll_role">
                   Role <span className="text-destructive">*</span>
                 </Label>
@@ -463,7 +450,7 @@ export function UserManagementPage({ users: initialUsers }: UserManagementPagePr
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium">
-                          {user.full_name || user.organization_name || "No name"}
+                          {user.full_name || "No name"}
                         </div>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Mail className="h-3 w-3" />

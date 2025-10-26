@@ -31,7 +31,7 @@ export default async function ApplicationsPage() {
   return (
     <DashboardLayout
       role="school"
-      userName={profile.organization_name || profile.full_name || profile.email}
+      userName={profile.full_name || profile.email}
       userEmail={profile.email}
     >
       <ResourceApplicationsPage schoolId={user.id} />x

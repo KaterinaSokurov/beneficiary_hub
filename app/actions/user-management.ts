@@ -7,7 +7,6 @@ interface EnrollUserData {
   password: string;
   full_name: string | null;
   phone_number: string | null;
-  organization_name: string | null;
   role: "admin" | "approver";
 }
 
@@ -67,8 +66,6 @@ export async function enrollUser(data: EnrollUserData) {
           email: data.email,
           role: data.role,
           full_name: data.full_name,
-          phone_number: data.phone_number,
-          organization_name: data.organization_name,
           is_active: true,
         });
 
@@ -83,8 +80,6 @@ export async function enrollUser(data: EnrollUserData) {
         .update({
           role: data.role,
           full_name: data.full_name,
-          phone_number: data.phone_number,
-          organization_name: data.organization_name,
           is_active: true,
         })
         .eq("id", newUser.user.id);

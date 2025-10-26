@@ -221,6 +221,9 @@ export function SchoolRegistrationForm() {
       if (profileError) throw profileError;
       if (!profile) throw new Error("Profile not found");
 
+      // Type assertion for profile data
+      const profileData = profile as unknown as { full_name: string | null; phone_number: string | null; email: string };
+
       // Step 1: Upload documents with progress tracking
       // Convert FileList to File objects
       const uploadResults = await uploadSchoolDocuments(
@@ -263,9 +266,9 @@ export function SchoolRegistrationForm() {
         ward: data.ward,
         physical_address: data.physicalAddress,
         gps_coordinates: data.gpsCoordinates,
-        head_teacher_name: profile.full_name || "",
-        head_teacher_phone: profile.phone_number || "",
-        head_teacher_email: profile.email || "",
+        head_teacher_name: profileData.full_name || "",
+        head_teacher_phone: profileData.phone_number || "",
+        head_teacher_email: profileData.email || "",
         alternative_contact_name: data.alternativeContactName,
         alternative_contact_phone: data.alternativeContactPhone,
         total_students: data.totalStudents,

@@ -34,7 +34,7 @@ const donationSchema = z.object({
   pickupLocation: z.string().min(5, "Pickup location is required"),
   city: z.string().min(2, "City is required"),
   province: z.string().min(2, "Province is required"),
-  deliveryAvailable: z.boolean().default(false),
+  deliveryAvailable: z.boolean(),
   deliveryRadius: z.number().optional(),
   specialInstructions: z.string().optional(),
 });

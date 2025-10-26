@@ -73,7 +73,7 @@ export const addressInfoSchema = z.object({
 // Step 3: Identification & Verification
 export const identificationSchema = z.object({
   idType: z.enum(["national_id", "passport", "driver_license", "other"], {
-    errorMap: () => ({ message: "Please select a valid ID type" }),
+    message: "Please select a valid ID type",
   }),
 
   idNumber: z.string()
@@ -116,14 +116,14 @@ export const preferencesSchema = z.object({
   donationCategories: z.array(z.string()).optional(),
 
   donationFrequency: z.enum(["one-time", "monthly", "quarterly", "yearly"], {
-    errorMap: () => ({ message: "Please select a valid donation frequency" }),
+    message: "Please select a valid donation frequency",
   }).optional(),
 
   preferredContactMethod: z.enum(["email", "phone", "sms"], {
-    errorMap: () => ({ message: "Please select a valid contact method" }),
+    message: "Please select a valid contact method",
   }).optional(),
 
-  newsletterConsent: z.boolean().default(false),
+  newsletterConsent: z.boolean(),
 
   motivationForDonating: z.string()
     .max(1000, "Motivation must not exceed 1000 characters")

@@ -31,7 +31,8 @@
       "Bash(ls:*)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nAdd admin donations management system with comprehensive features\n\nThis commit implements a complete admin interface for managing donations:\n\n- Admin donations listing page with tabbed interface (pending, approved, rejected, active, completed, all)\n- Donation approval and rejection workflow with required rejection reasons\n- Donor details modal showing comprehensive donor information\n- Fixed foreign key relationship between donations and donors tables\n- Added complete database type definitions for donations table\n- Integration with admin dashboard showing donations statistics\n- Server actions for approving and rejecting donations\n- Proper use of service role client to bypass RLS policies\n\nAdditional improvements:\n- Updated README with comprehensive system documentation\n- Added ERD, DFD, Use Case, Sequence, and other UML diagrams\n- Complete technology stack and deployment documentation\n- Detailed user roles and workflows\nEOF\n)\")",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

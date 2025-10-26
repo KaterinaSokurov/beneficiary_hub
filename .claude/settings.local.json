@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__execute_sql",
+      "Bash(npm install:*)",
+      "mcp__supabase__generate_typescript_types",
+      "Bash(mkdir:*)",
+      "mcp__supabase__apply_migration",
+      "Bash(npm run build:*)",
+      "mcp__shadcn__get_project_registries",
+      "mcp__shadcn__search_items_in_registries",
+      "mcp__shadcn__list_items_in_registries",
+      "mcp__shadcn__get_add_command_for_items",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(printf:*)",
+      "mcp__shadcn__view_items_in_registries",
+      "WebFetch(domain:ui.shadcn.com)",
+      "mcp__shadcn__get_item_examples_from_registries",
+      "Read(//Users/philemon/Desktop/**)",
+      "Bash(cat:*)",
+      "Bash(TURBOPACK=0 npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsc:*)",
+      "mcp__supabase__list_storage_buckets",
+      "Bash(ls:*)",
+      "Bash(git add:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}

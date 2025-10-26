@@ -1,0 +1,129 @@
+---
+
+## 🧩 **Objective 1: Donor Resource Listing**
+
+### 1. **Guided Online Form Requirements**
+
+When a donor logs in, they are taken through a **guided online form** that collects structured information about their intended donation.
+**Form fields may include:**
+
+* **Resource Type:** (e.g., food, textbooks, stationery, utilities, furniture, clothing)
+* **Quantity / Value**
+* **Condition:** (new, used, refurbished)
+* **Availability period:** (one-time or recurring donation)
+* **Location:** (where the resource can be picked up or delivered)
+* **Upload proof/document:** (optional receipts or verification images)
+* **Contact details / preferred communication method**
+
+💡 *Purpose:* This ensures that all listed items are uniform and complete, making it easier for the system to match them to the right beneficiary needs later.
+
+---
+
+### 2. **Resource Submission Functionality**
+
+Once the form is filled:
+
+* The donor clicks **Submit**.
+* The system saves the record in the **resources** table (e.g., `resources` table in MySQL).
+* The resource entry is tagged as **“Pending Admin Approval.”**
+* The donor can view all submitted resources in their **Donor Dashboard** under “My Listings.”
+* Admins are notified automatically that a new listing is awaiting review.
+
+💡 *Purpose:* This ensures quality control and prevents spam or irrelevant listings.
+
+---
+
+### 3. **Admin Approval Process**
+
+When an admin logs in:
+
+* They open the **Admin Dashboard**.
+* A list of newly submitted resources appears, each marked *Pending*.
+* The admin can:
+
+  * View full donor details and attached images/documents.
+  * Edit or reject incomplete listings.
+  * Approve resources that meet the platform’s standards.
+
+Once approved:
+
+* The resource becomes **Active** and visible in the **Resource Pool**.
+* The donor receives an email/notification confirming approval.
+
+💡 *Purpose:* Admin oversight maintains platform integrity and reliability.
+
+---
+
+## 🏫 **Objective 2: Resource Matching and Booking**
+
+### 4. **System Matching**
+
+When a school (beneficiary) fills out a **resource request form**, the system automatically runs a **matching algorithm**:
+
+* Compares requested resource type (e.g., “Food”) with available donor listings.
+* Filters by **quantity**, **location proximity**, and **availability dates**.
+* Assigns a **priority score** (based on the school’s questionnaire responses — urgency, number of students affected, etc.).
+
+The system then suggests **best-fit matches** for admin review.
+
+💡 *Purpose:* Reduces manual work and ensures schools receive help faster based on real needs.
+
+---
+
+### 5. **Admin Confirmation**
+
+The admin reviews the system-generated matches:
+
+* Confirms if the proposed match is logical and feasible.
+* Contacts both donor and school (if necessary) to finalize details.
+* Upon confirmation, marks the match as **Approved for Booking**.
+
+💡 *Purpose:* Allows human oversight to validate automated decisions before any logistics occur.
+
+---
+
+### 6. **Booking and Scheduling**
+
+After confirmation:
+
+* A **booking record** is created — linking the **school request** and the **donor resource**.
+* A **schedule** is generated for:
+
+  * Delivery date and time.
+  * Pick-up or drop-off arrangements.
+  * Responsible parties (e.g., logistics partner, driver, or school representative).
+
+Both donor and school see the booking status on their dashboards:
+
+* **“Scheduled”** when a date/time is confirmed.
+* **“Completed”** once delivery or collection is verified.
+
+💡 *Purpose:* Ensures transparency, accountability, and tracking of every donation.
+
+---
+
+### 7. **Urgency-Based Approval Functionality**
+
+Before final admin approval:
+
+* The system analyzes the **beneficiary questionnaire**, which gives each request a **priority score** (e.g., 1–100).
+* Higher scores indicate greater urgency (e.g., “students have no meals today” = 95/100).
+* The **Admin Dashboard** displays:
+
+  * Resource requests sorted by **priority level**.
+  * Visual indicators (e.g., red = urgent, yellow = moderate, green = low).
+
+The admin then **approves requests starting with the highest urgency**, ensuring critical needs are addressed first.
+
+
+
+• To register beneficiaries and donors, enabling profile updates, history tracking, and
+account management.
+• To prioritize resources based on urgency, determined by a scoring system assessing
+student impact and shortage severity.
+• To allow donors to list resources via a guided online form with item details and
+photos.
+• To book and schedule resources through coordinated school–donor arrangements
+within the platform.
+
+OBJECTIVES

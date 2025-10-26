@@ -8,8 +8,8 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: beneficiary-hub
-    ports:
-      - "3000:3000"
+    # ports:
+    #   - "3000:3000"
     environment:
       # Supabase Configuration
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # Next.js Application - Production Mode
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: beneficiary-hub
+    ports:
+      - "3000:3000"
+    environment:
+      # Supabase Configuration
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_SERVICE_ROLE_KEY=${NEXT_PUBLIC_SERVICE_ROLE_KEY}
+
+      # Google Maps API
+      - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+
+      # Node Environment
+      - NODE_ENV=production
+
+      # Next.js Configuration
+      - NEXT_TELEMETRY_DISABLED=1
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -36,7 +36,8 @@
       "Bash(git push:*)",
       "Bash(for file in app/school/settings/page.tsx app/school/applications/new/page.tsx \"app/school/applications/[id]/edit/page.tsx\" app/school/applications/page.tsx app/school/page.tsx)",
       "Bash(do)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npx tsx:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

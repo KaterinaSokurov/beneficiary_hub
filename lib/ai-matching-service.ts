@@ -54,10 +54,10 @@ export async function generateDonationMatches(
   donation: DonationData,
   applications: ApplicationData[]
 ): Promise<MatchRecommendation[]> {
-  const apiKey = process.env.CLAUDE_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_CLAUDE_API_KEY || process.env.CLAUDE_API_KEY;
 
   if (!apiKey) {
-    throw new Error("CLAUDE_API_KEY environment variable is not set");
+    throw new Error("CLAUDE_API_KEY or NEXT_PUBLIC_CLAUDE_API_KEY environment variable is not set");
   }
 
   const client = new Anthropic({
@@ -94,8 +94,12 @@ Sort the recommendations by priority_rank (best matches first).
 Return ONLY the JSON array, no additional text or explanation.`;
 
   try {
+    console.log("[AI Matching] Starting AI matching request...");
+    console.log(`[AI Matching] Donation: ${donation.title}`);
+    console.log(`[AI Matching] Applications to match: ${applications.length}`);
+
     const message = await client.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-haiku-20240307",
       max_tokens: 4096,
       messages: [
         {
@@ -105,17 +109,28 @@ Return ONLY the JSON array, no additional text or explanation.`;
       ],
     });
 
+    console.log("[AI Matching] Received response from Claude API");
+    console.log(`[AI Matching] Response ID: ${message.id}`);
+    console.log(`[AI Matching] Model: ${message.model}`);
+
     const content = message.content[0];
     if (content.type !== "text") {
+      console.error("[AI Matching] ERROR: Unexpected response type:", content.type);
       throw new Error("Unexpected response type from Claude API");
     }
+
+    console.log("[AI Matching] Response text length:", content.text.length);
+    console.log("[AI Matching] First 200 chars:", content.text.substring(0, 200));
 
     // Extract JSON from response
     const jsonMatch = content.text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
+      console.error("[AI Matching] ERROR: Could not find JSON in response");
+      console.error("[AI Matching] Full response:", content.text);
       throw new Error("Could not extract JSON from Claude API response");
     }
 
+    console.log("[AI Matching] Successfully extracted JSON from response");
     const matches: MatchRecommendation[] = JSON.parse(jsonMatch[0]);
 
     // Validate the response structure
@@ -136,9 +151,15 @@ Return ONLY the JSON array, no additional text or explanation.`;
       }
     }
 
+    console.log(`[AI Matching] Successfully validated ${matches.length} matches`);
     return matches;
   } catch (error) {
-    console.error("Error generating donation matches:", error);
+    console.error("[AI Matching] ERROR generating donation matches:", error);
+    if (error instanceof Error) {
+      console.error("[AI Matching] Error name:", error.name);
+      console.error("[AI Matching] Error message:", error.message);
+      console.error("[AI Matching] Error stack:", error.stack);
+    }
     throw error;
   }
 }

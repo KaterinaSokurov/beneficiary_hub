@@ -26,7 +26,7 @@ services:
       - NEXT_TELEMETRY_DISABLED=1
       - HOSTNAME=0.0.0.0
       - PORT=3000
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - NEXT_PUBLIC_CLAUDE_API_KEY=${NEXT_PUBLIC_CLAUDE_API_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/ || exit 1"]

@@ -7,8 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, XCircle, Brain, Package, School, MapPin, Users, Loader2, AlertCircle } from "lucide-react";
-import { getPendingMatches, approveMatch, rejectMatch, getMatchHistory } from "@/app/actions/approve-matches";
+import { CheckCircle, XCircle, Brain, Package, School, MapPin, Users, Loader2, AlertCircle, Calendar, Clock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getPendingMatches, approveMatch, rejectMatch, getMatchHistory, type HandoverSchedule } from "@/app/actions/approve-matches";
 import { toast } from "sonner";
 
 export function MatchApprovalInterface() {
@@ -17,9 +19,19 @@ export function MatchApprovalInterface() {
   const [loading, setLoading] = useState(true);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [approverNotes, setApproverNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+
+  // Handover scheduling state
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [venue, setVenue] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [contactPerson, setContactPerson] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [handoverNotes, setHandoverNotes] = useState("");
 
   useEffect(() => {
     loadData();
@@ -48,15 +60,32 @@ export function MatchApprovalInterface() {
     }
   };
 
-  const handleApprove = async (matchId: string) => {
+  const handleApprove = async () => {
+    // Validate handover scheduling fields
+    if (!scheduledDate || !scheduledTime || !venue || !venueAddress || !contactPerson || !contactPhone) {
+      toast.error("Please fill in all handover scheduling fields");
+      return;
+    }
+
     setProcessing(true);
     try {
-      const result = await approveMatch(matchId, approverNotes);
+      const handoverSchedule: HandoverSchedule = {
+        scheduledDate,
+        scheduledTime,
+        venue,
+        venueAddress,
+        contactPerson,
+        contactPhone,
+        handoverNotes,
+      };
+
+      const result = await approveMatch(selectedMatch.id, handoverSchedule, approverNotes);
       if (result.success) {
-        toast.success("Match approved successfully!");
+        toast.success("Match approved and handover scheduled! Both parties will be notified.");
         await loadData();
+        setShowApproveDialog(false);
         setSelectedMatch(null);
-        setApproverNotes("");
+        resetForm();
       } else {
         toast.error(result.error || "Failed to approve match");
       }
@@ -66,6 +95,17 @@ export function MatchApprovalInterface() {
     } finally {
       setProcessing(false);
     }
+  };
+
+  const resetForm = () => {
+    setApproverNotes("");
+    setScheduledDate("");
+    setScheduledTime("");
+    setVenue("");
+    setVenueAddress("");
+    setContactPerson("");
+    setContactPhone("");
+    setHandoverNotes("");
   };
 
   const handleReject = async () => {
@@ -226,18 +266,15 @@ export function MatchApprovalInterface() {
         {/* Actions */}
         <div className="pt-4 border-t flex gap-3">
           <Button
-            onClick={() => handleApprove(match.id)}
+            onClick={() => {
+              setSelectedMatch(match);
+              setShowApproveDialog(true);
+            }}
             disabled={processing}
             className="flex-1 gap-2"
           >
-            {processing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                Approve Match
-              </>
-            )}
+            <CheckCircle className="h-4 w-4" />
+            Approve & Schedule Handover
           </Button>
           <Button
             variant="destructive"
@@ -359,6 +396,154 @@ export function MatchApprovalInterface() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Approve Dialog with Handover Scheduling */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Schedule Handover & Approve Match
+            </DialogTitle>
+            <DialogDescription>
+              Schedule when and where the donor and school will meet to handover the donation. Both parties will be notified with full details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="scheduledDate">
+                  Date <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="scheduledDate"
+                  type="date"
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div>
+                <Label htmlFor="scheduledTime">
+                  Time <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="scheduledTime"
+                  type="time"
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="venue">
+                Venue Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="venue"
+                placeholder="e.g., School Main Gate, Community Center"
+                value={venue}
+                onChange={(e) => setVenue(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="venueAddress">
+                Venue Address <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="venueAddress"
+                placeholder="Full address of the handover location..."
+                value={venueAddress}
+                onChange={(e) => setVenueAddress(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="contactPerson">
+                  Contact Person <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="contactPerson"
+                  placeholder="Coordinator name"
+                  value={contactPerson}
+                  onChange={(e) => setContactPerson(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="contactPhone">
+                  Contact Phone <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  placeholder="Phone number"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="handoverNotes">
+                Handover Instructions (Optional)
+              </Label>
+              <Textarea
+                id="handoverNotes"
+                placeholder="Any special instructions for both parties..."
+                value={handoverNotes}
+                onChange={(e) => setHandoverNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="approverNotes">
+                Approver Notes (Optional)
+              </Label>
+              <Textarea
+                id="approverNotes"
+                placeholder="Your review comments..."
+                value={approverNotes}
+                onChange={(e) => setApproverNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <p className="text-sm text-blue-800">
+                <strong>Note:</strong> Upon approval, the donation and application will be marked as completed, and both the donor and school will receive handover details.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApprove}
+              disabled={processing}
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve & Schedule
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>

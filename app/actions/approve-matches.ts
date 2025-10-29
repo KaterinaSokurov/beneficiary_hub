@@ -2,7 +2,21 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 
-export async function approveMatch(matchId: string, approverNotes?: string) {
+export interface HandoverSchedule {
+  scheduledDate: string;
+  scheduledTime: string;
+  venue: string;
+  venueAddress: string;
+  contactPerson: string;
+  contactPhone: string;
+  handoverNotes?: string;
+}
+
+export async function approveMatch(
+  matchId: string,
+  handoverSchedule: HandoverSchedule,
+  approverNotes?: string
+) {
   try {
     const supabase = await createClient();
     const {
@@ -38,15 +52,26 @@ export async function approveMatch(matchId: string, approverNotes?: string) {
       return { success: false, error: "Match not found or not ready for approval" };
     }
 
-    // Update match status to approved
+    const now = new Date().toISOString();
+
+    // Update match status to approved with handover details
     const { error: updateMatchError } = await adminClient
       .from("donation_matches")
       .update({
         status: "approved_by_approver",
         reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
+        reviewed_at: now,
         approver_notes: approverNotes,
-        updated_at: new Date().toISOString(),
+        handover_scheduled_date: handoverSchedule.scheduledDate,
+        handover_scheduled_time: handoverSchedule.scheduledTime,
+        handover_venue: handoverSchedule.venue,
+        handover_venue_address: handoverSchedule.venueAddress,
+        handover_contact_person: handoverSchedule.contactPerson,
+        handover_contact_phone: handoverSchedule.contactPhone,
+        handover_notes: handoverSchedule.handoverNotes,
+        donor_notified_at: now,
+        school_notified_at: now,
+        updated_at: now,
       })
       .eq("id", matchId);
 
@@ -55,17 +80,33 @@ export async function approveMatch(matchId: string, approverNotes?: string) {
       return { success: false, error: updateMatchError.message };
     }
 
-    // Update donation status - keep allocated status but mark as fully approved
+    // Update donation status to delivered (handover scheduled)
     const { error: donationError } = await adminClient
       .from("donations")
       .update({
-        updated_at: new Date().toISOString(),
+        status: "delivered",
+        delivered_at: now,
+        updated_at: now,
       })
       .eq("id", match.donation_id);
 
     if (donationError) {
       console.error("Error updating donation:", donationError);
       return { success: false, error: donationError.message };
+    }
+
+    // Update application status to fulfilled
+    const { error: applicationError } = await adminClient
+      .from("resource_applications")
+      .update({
+        status: "fulfilled",
+        updated_at: now,
+      })
+      .eq("id", match.application_id);
+
+    if (applicationError) {
+      console.error("Error updating application:", applicationError);
+      return { success: false, error: applicationError.message };
     }
 
     return { success: true };

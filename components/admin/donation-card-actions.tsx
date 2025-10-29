@@ -22,8 +22,10 @@ export function DonationCardActions({
 }: DonationCardActionsProps) {
   const [matchingDialogOpen, setMatchingDialogOpen] = useState(false);
 
-  // Only show matching for approved donations that aren't allocated yet
-  const showMatching = approvalStatus === "approved" && status === "approved";
+  // Show matching for approved donations that aren't delivered yet
+  // This includes: "approved" (ready for first match) and "allocated" (already matched, can be re-matched if rejected)
+  const showMatching = approvalStatus === "approved" &&
+                       (status === "approved" || status === "allocated");
 
   if (!showMatching) {
     return null;

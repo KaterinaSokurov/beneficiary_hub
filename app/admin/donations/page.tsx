@@ -68,9 +68,11 @@ export default async function AdminDonationsPage() {
 
   // Categorize donations
   const pendingApproval = donationsWithEmails?.filter(d => d.approval_status === "pending") || [];
-  const approved = donationsWithEmails?.filter(d => d.approval_status === "approved") || [];
+  // "Approved" tab shows donations approved by admin but not yet allocated (ready for AI matching)
+  const approved = donationsWithEmails?.filter(d => d.approval_status === "approved" && d.status === "approved") || [];
   const rejected = donationsWithEmails?.filter(d => d.approval_status === "rejected") || [];
-  const active = donationsWithEmails?.filter(d => d.status === "approved" || d.status === "allocated") || [];
+  // "Active" tab shows donations that have been allocated (pending approver or in progress)
+  const active = donationsWithEmails?.filter(d => d.status === "allocated") || [];
   const completed = donationsWithEmails?.filter(d => d.status === "delivered") || [];
 
   const getStatusBadge = (status: string) => {

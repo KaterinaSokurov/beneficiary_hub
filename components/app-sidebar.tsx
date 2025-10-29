@@ -39,13 +39,13 @@ export function AppSidebar({
       admin: [
         { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
         {
-          title: "School Approvals",
+          title: "Schools",
           url: "/admin/schools",
           icon: School,
           ...(pendingCount && pendingCount > 0 ? { badge: pendingCount } : {}),
         },
         {
-          title: "Donor Approvals",
+          title: "Donors",
           url: "/admin/donors",
           icon: Heart,
           ...(pendingDonorsCount && pendingDonorsCount > 0 ? { badge: pendingDonorsCount } : {}),

@@ -65,8 +65,7 @@ export function AppSidebar({
       ],
       donor: [
         { title: "Dashboard", url: "/donor", icon: LayoutDashboard },
-        { title: "My Resources", url: "/donor/resources", icon: Heart },
-        { title: "Donations", url: "/donor/donations", icon: FileText },
+        { title: "Donations", url: "/donor/donations", icon: Package },
       ],
       school: [
         { title: "Dashboard", url: "/school", icon: LayoutDashboard },

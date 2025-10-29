@@ -57,11 +57,10 @@ export function AppSidebar({
       approver: [
         { title: "Dashboard", url: "/approver", icon: LayoutDashboard },
         {
-          title: "Resource Approvals",
-          url: "/approver/resources",
-          icon: CheckCircle,
+          title: "Donation Approvals",
+          url: "/approver/donations",
+          icon: Package,
         },
-        { title: "Applications", url: "/approver/applications", icon: FileText },
       ],
       donor: [
         { title: "Dashboard", url: "/donor", icon: LayoutDashboard },

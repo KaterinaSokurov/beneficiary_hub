@@ -126,10 +126,16 @@ export default async function DonationsListPage() {
                           Pending Approval
                         </Badge>
                       )}
+                      {donation.approval_status === "pending_final_approval" && (
+                        <Badge variant="outline" className="gap-1 border-blue-300 bg-blue-50 text-blue-700">
+                          <Clock className="h-3 w-3" />
+                          Admin Approved - Awaiting Final Review
+                        </Badge>
+                      )}
                       {donation.approval_status === "approved" && (
                         <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
                           <CheckCircle className="h-3 w-3" />
-                          Approved
+                          Fully Approved
                         </Badge>
                       )}
                       {donation.approval_status === "rejected" && (

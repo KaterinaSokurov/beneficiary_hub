@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Clock, CheckCircle, XCircle, Truck, AlertCircle, User } from "lucide-react";
-import { DonationApprovalActions } from "@/components/admin/donation-approval-actions";
+import { Package, Clock, CheckCircle, XCircle, Truck, AlertCircle, User, Shield } from "lucide-react";
+import { DonationFinalApprovalActions } from "@/components/approver/donation-final-approval-actions";
 import { DonorDetailsModal } from "@/components/admin/donor-details-modal";
 
-export default async function AdminDonationsPage() {
+export default async function ApproverDonationsPage() {
   const supabase = await createClient();
   const adminClient = createAdminClient();
 
@@ -27,18 +27,9 @@ export default async function AdminDonationsPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "admin") {
+  if (!profile || profile.role !== "approver") {
     redirect("/");
   }
-
-  // Get pending counts for notifications
-  const [
-    { count: pendingSchools },
-    { count: pendingDonors }
-  ] = await Promise.all([
-    adminClient.from("schools").select("*", { count: "exact", head: true }).eq("approval_status", "pending"),
-    adminClient.from("donors").select("*", { count: "exact", head: true }).eq("verification_status", "pending"),
-  ]);
 
   // Fetch all donations with complete donor information
   const { data: allDonations } = await adminClient
@@ -66,12 +57,9 @@ export default async function AdminDonationsPage() {
   }));
 
   // Categorize donations
-  const pendingApproval = donationsWithEmails?.filter(d => d.approval_status === "pending") || [];
   const pendingFinalApproval = donationsWithEmails?.filter(d => d.approval_status === "pending_final_approval") || [];
   const approved = donationsWithEmails?.filter(d => d.approval_status === "approved") || [];
   const rejected = donationsWithEmails?.filter(d => d.approval_status === "rejected") || [];
-  const active = donationsWithEmails?.filter(d => d.status === "approved" || d.status === "allocated") || [];
-  const completed = donationsWithEmails?.filter(d => d.status === "delivered") || [];
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", icon: any }> = {
@@ -97,9 +85,9 @@ export default async function AdminDonationsPage() {
   const getApprovalBadge = (approvalStatus: string) => {
     if (approvalStatus === "pending_final_approval") {
       return (
-        <Badge variant="outline" className="gap-1 border-blue-300 bg-blue-50 text-blue-700">
-          <Clock className="h-3 w-3" />
-          Pending Final Approval
+        <Badge variant="outline" className="gap-1 border-orange-300 bg-orange-50 text-orange-700">
+          <Shield className="h-3 w-3" />
+          Awaiting Final Approval
         </Badge>
       );
     }
@@ -114,7 +102,9 @@ export default async function AdminDonationsPage() {
 
     return (
       <Badge variant={config.variant}>
-        {approvalStatus.charAt(0).toUpperCase() + approvalStatus.slice(1)}
+        {approvalStatus === "pending_final_approval"
+          ? "Awaiting Final Approval"
+          : approvalStatus.charAt(0).toUpperCase() + approvalStatus.slice(1)}
       </Badge>
     );
   };
@@ -189,6 +179,15 @@ export default async function AdminDonationsPage() {
           </div>
         )}
 
+        {donation.admin_approved_at && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm font-medium text-blue-900">Admin Pre-Approval:</p>
+            <p className="text-sm text-blue-700 mt-1">
+              Pre-approved by admin on {new Date(donation.admin_approved_at).toLocaleString()}
+            </p>
+          </div>
+        )}
+
         {donation.rejection_reason && (
           <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
             <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
@@ -206,9 +205,16 @@ export default async function AdminDonationsPage() {
           )}
         </div>
 
-        {donation.approval_status === "pending" && (
+        {donation.approval_status === "pending_final_approval" && (
           <div className="mt-4 pt-4 border-t">
-            <DonationApprovalActions donationId={donation.id} />
+            <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+              <p className="text-sm font-medium text-orange-900">Your Role:</p>
+              <p className="text-sm text-orange-700 mt-1">
+                As the final approver, you provide an unbiased review to prevent favoritism.
+                Admin has pre-approved this donation for initial checks.
+              </p>
+            </div>
+            <DonationFinalApprovalActions donationId={donation.id} />
           </div>
         )}
       </CardContent>
@@ -217,49 +223,27 @@ export default async function AdminDonationsPage() {
 
   return (
     <DashboardLayout
-      role="admin"
-      userName={profile.email}
+      role="approver"
+      userName={profile.full_name || profile.email}
       userEmail={profile.email}
-      pendingCount={pendingSchools || 0}
-      pendingDonorsCount={pendingDonors || 0}
     >
       <div className="space-y-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Donations Management</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Donation Approvals</h2>
           <p className="text-muted-foreground mt-2">
-            Review and manage all donation listings
+            Final approval of donations to prevent bias
           </p>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Donations</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{donationsWithEmails?.length || 0}</div>
-            </CardContent>
-          </Card>
-
+        <div className="grid gap-4 md:grid-cols-3">
           <Card className="border-orange-200 bg-orange-50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+              <CardTitle className="text-sm font-medium">Pending Final Approval</CardTitle>
               <AlertCircle className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-700">{pendingApproval.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Final Approval</CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-700">{pendingFinalApproval.length}</div>
+              <div className="text-2xl font-bold text-orange-700">{pendingFinalApproval.length}</div>
             </CardContent>
           </Card>
 
@@ -275,21 +259,11 @@ export default async function AdminDonationsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <Truck className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium">Rejected</CardTitle>
+              <XCircle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{active.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completed.length}</div>
+              <div className="text-2xl font-bold">{rejected.length}</div>
             </CardContent>
           </Card>
         </div>
@@ -298,48 +272,23 @@ export default async function AdminDonationsPage() {
         <Tabs defaultValue="pending" className="space-y-4">
           <TabsList>
             <TabsTrigger value="pending" className="relative">
-              Pending Admin Approval
-              {pendingApproval.length > 0 && (
-                <span className="ml-2 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                  {pendingApproval.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="pending_final" className="relative">
               Pending Final Approval
               {pendingFinalApproval.length > 0 && (
-                <span className="ml-2 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                <span className="ml-2 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                   {pendingFinalApproval.length}
                 </span>
               )}
             </TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
-            {pendingApproval.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No donations pending admin approval</p>
-                </CardContent>
-              </Card>
-            ) : (
-              pendingApproval.map(renderDonationCard)
-            )}
-          </TabsContent>
-
-          <TabsContent value="pending_final" className="space-y-4">
             {pendingFinalApproval.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center">
-                  <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No donations pending final approval</p>
-                  <p className="text-xs text-muted-foreground mt-2">These donations await approver review</p>
                 </CardContent>
               </Card>
             ) : (
@@ -360,32 +309,6 @@ export default async function AdminDonationsPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="active" className="space-y-4">
-            {active.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <Truck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No active donations</p>
-                </CardContent>
-              </Card>
-            ) : (
-              active.map(renderDonationCard)
-            )}
-          </TabsContent>
-
-          <TabsContent value="completed" className="space-y-4">
-            {completed.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No completed donations</p>
-                </CardContent>
-              </Card>
-            ) : (
-              completed.map(renderDonationCard)
-            )}
-          </TabsContent>
-
           <TabsContent value="rejected" className="space-y-4">
             {rejected.length === 0 ? (
               <Card>
@@ -396,19 +319,6 @@ export default async function AdminDonationsPage() {
               </Card>
             ) : (
               rejected.map(renderDonationCard)
-            )}
-          </TabsContent>
-
-          <TabsContent value="all" className="space-y-4">
-            {!donationsWithEmails || donationsWithEmails.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No donations yet</p>
-                </CardContent>
-              </Card>
-            ) : (
-              donationsWithEmails.map(renderDonationCard)
             )}
           </TabsContent>
         </Tabs>

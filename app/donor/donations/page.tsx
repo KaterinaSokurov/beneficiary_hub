@@ -126,6 +126,18 @@ export default async function DonationsListPage() {
                           Pending Approval
                         </Badge>
                       )}
+                      {donation.approval_status === "approved" && (
+                        <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700">
+                          <CheckCircle className="h-3 w-3" />
+                          Approved
+                        </Badge>
+                      )}
+                      {donation.approval_status === "rejected" && (
+                        <Badge variant="destructive" className="gap-1">
+                          <XCircle className="h-3 w-3" />
+                          Rejected
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardHeader>

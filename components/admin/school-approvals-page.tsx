@@ -62,7 +62,7 @@ export function SchoolApprovalsPage() {
 
       if (fetchError) throw fetchError;
 
-      setSchools(data || []);
+      setSchools((data || []) as any);
     } catch (err) {
       console.error("Error fetching schools:", err);
       setError(err instanceof Error ? err.message : "Failed to load schools");

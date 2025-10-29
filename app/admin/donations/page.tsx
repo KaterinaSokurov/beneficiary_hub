@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, Clock, CheckCircle, XCircle, Truck, AlertCircle, User } from "lucide-react";
 import { DonationApprovalActions } from "@/components/admin/donation-approval-actions";
 import { DonorDetailsModal } from "@/components/admin/donor-details-modal";
+import { DonationCardActions } from "@/components/admin/donation-card-actions";
 
 export default async function AdminDonationsPage() {
   const supabase = await createClient();
@@ -63,11 +64,10 @@ export default async function AdminDonationsPage() {
       ...(donation.donors as any),
       email: donorProfiles?.find(p => p.id === (donation.donors as any)?.id)?.email
     } : null
-  }));
+  })) as any[];
 
   // Categorize donations
   const pendingApproval = donationsWithEmails?.filter(d => d.approval_status === "pending") || [];
-  const pendingFinalApproval = donationsWithEmails?.filter(d => d.approval_status === "pending_final_approval") || [];
   const approved = donationsWithEmails?.filter(d => d.approval_status === "approved") || [];
   const rejected = donationsWithEmails?.filter(d => d.approval_status === "rejected") || [];
   const active = donationsWithEmails?.filter(d => d.status === "approved" || d.status === "allocated") || [];
@@ -95,15 +95,6 @@ export default async function AdminDonationsPage() {
   };
 
   const getApprovalBadge = (approvalStatus: string) => {
-    if (approvalStatus === "pending_final_approval") {
-      return (
-        <Badge variant="outline" className="gap-1 border-blue-300 bg-blue-50 text-blue-700">
-          <Clock className="h-3 w-3" />
-          Pending Final Approval
-        </Badge>
-      );
-    }
-
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline" }> = {
       pending: { variant: "outline" },
       approved: { variant: "default" },
@@ -211,6 +202,13 @@ export default async function AdminDonationsPage() {
             <DonationApprovalActions donationId={donation.id} />
           </div>
         )}
+
+        <DonationCardActions
+          donationId={donation.id}
+          donationTitle={donation.title}
+          approvalStatus={donation.approval_status}
+          status={donation.status}
+        />
       </CardContent>
     </Card>
   );
@@ -232,7 +230,7 @@ export default async function AdminDonationsPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Donations</CardTitle>
@@ -250,16 +248,6 @@ export default async function AdminDonationsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-700">{pendingApproval.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Final Approval</CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-700">{pendingFinalApproval.length}</div>
             </CardContent>
           </Card>
 
@@ -298,18 +286,10 @@ export default async function AdminDonationsPage() {
         <Tabs defaultValue="pending" className="space-y-4">
           <TabsList>
             <TabsTrigger value="pending" className="relative">
-              Pending Admin Approval
+              Pending Approval
               {pendingApproval.length > 0 && (
                 <span className="ml-2 bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                   {pendingApproval.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="pending_final" className="relative">
-              Pending Final Approval
-              {pendingFinalApproval.length > 0 && (
-                <span className="ml-2 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                  {pendingFinalApproval.length}
                 </span>
               )}
             </TabsTrigger>
@@ -325,25 +305,11 @@ export default async function AdminDonationsPage() {
               <Card>
                 <CardContent className="py-10 text-center">
                   <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No donations pending admin approval</p>
+                  <p className="text-muted-foreground">No donations pending approval</p>
                 </CardContent>
               </Card>
             ) : (
               pendingApproval.map(renderDonationCard)
-            )}
-          </TabsContent>
-
-          <TabsContent value="pending_final" className="space-y-4">
-            {pendingFinalApproval.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No donations pending final approval</p>
-                  <p className="text-xs text-muted-foreground mt-2">These donations await approver review</p>
-                </CardContent>
-              </Card>
-            ) : (
-              pendingFinalApproval.map(renderDonationCard)
             )}
           </TabsContent>
 

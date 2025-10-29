@@ -68,7 +68,7 @@ export function SchoolDetailsDialog({
         .single();
 
       if (error) throw error;
-      setFullSchoolData(data);
+      setFullSchoolData(data as any);
     } catch (err) {
       console.error("Error fetching school details:", err);
     } finally {

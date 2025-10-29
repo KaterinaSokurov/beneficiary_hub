@@ -46,8 +46,8 @@ export default async function SettingsPage() {
           userEmail={profile.email}
         >
     <SchoolSettingsPage
-      school={school}
-      profile={profile}
+      school={school as any}
+      profile={profile as any}
     /></DashboardLayout>
   );
 }

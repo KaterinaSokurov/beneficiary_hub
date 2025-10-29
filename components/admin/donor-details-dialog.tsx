@@ -310,7 +310,7 @@ export function DonorDetailsDialog({
                   <Label className="text-muted-foreground">Preferred Donation Categories</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {donor.preferred_donation_categories && donor.preferred_donation_categories.length > 0 ? (
-                      donor.preferred_donation_categories.map((category) => (
+                      donor.preferred_donation_categories.map((category: string) => (
                         <Badge key={category} variant="secondary" className="capitalize">
                           {category}
                         </Badge>

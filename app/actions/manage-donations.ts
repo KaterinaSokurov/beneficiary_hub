@@ -26,13 +26,12 @@ export async function approveDonation(donationId: string) {
       return { success: false, error: "Unauthorized" };
     }
 
-    // Update donation status - Admin approval sends to approver for final review
+    // Update donation status
     const { error: updateError } = await adminClient
       .from("donations")
       .update({
-        approval_status: "pending_final_approval",
-        admin_approved_by: user.id,
-        admin_approved_at: new Date().toISOString(),
+        approval_status: "approved",
+        status: "approved",
         updated_at: new Date().toISOString(),
       })
       .eq("id", donationId);

@@ -89,7 +89,7 @@ export function ResourceApplicationsPage({ schoolId }: ResourceApplicationsPageP
 
       if (fetchError) throw fetchError;
 
-      setApplications(data || []);
+      setApplications((data || []) as any);
     } catch (err) {
       console.error("Error fetching applications:", err);
       setError(err instanceof Error ? err.message : "Failed to load applications");

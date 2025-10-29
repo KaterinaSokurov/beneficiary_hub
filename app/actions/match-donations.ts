@@ -1,0 +1,274 @@
+"use server";
+
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { generateDonationMatches } from "@/lib/ai-matching-service";
+
+export async function generateMatchRecommendations(donationId: string) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    // Verify admin role
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const adminClient = createAdminClient();
+
+    // Fetch the donation details
+    const { data: donation, error: donationError } = await adminClient
+      .from("donations")
+      .select("*")
+      .eq("id", donationId)
+      .eq("approval_status", "approved")
+      .single();
+
+    if (donationError || !donation) {
+      return { success: false, error: "Donation not found or not approved" };
+    }
+
+    // Fetch all submitted/approved applications from schools
+    const { data: applications, error: applicationsError } = await adminClient
+      .from("resource_applications")
+      .select(`
+        *,
+        schools:school_id (
+          id,
+          school_name,
+          province,
+          district,
+          total_students,
+          total_teachers,
+          students_requiring_meals,
+          has_electricity,
+          has_running_water,
+          has_library,
+          classroom_condition
+        )
+      `)
+      .in("status", ["submitted", "under_review", "approved"]);
+
+    if (applicationsError || !applications || applications.length === 0) {
+      return { success: false, error: "No applications found to match" };
+    }
+
+    // Transform data for AI matching
+    const formattedApplications = applications.map((app: any) => ({
+      id: app.id,
+      application_title: app.application_title,
+      application_type: app.application_type,
+      priority_level: app.priority_level,
+      resources_needed: app.resources_needed,
+      current_situation: app.current_situation,
+      expected_impact: app.expected_impact,
+      beneficiaries_count: app.beneficiaries_count,
+      needed_by_date: app.needed_by_date,
+      school: {
+        id: app.schools.id,
+        school_name: app.schools.school_name,
+        province: app.schools.province,
+        district: app.schools.district,
+        total_students: app.schools.total_students,
+        total_teachers: app.schools.total_teachers,
+        students_requiring_meals: app.schools.students_requiring_meals,
+        has_electricity: app.schools.has_electricity,
+        has_running_water: app.schools.has_running_water,
+        has_library: app.schools.has_library,
+        classroom_condition: app.schools.classroom_condition,
+      },
+    }));
+
+    // Generate AI-powered match recommendations
+    const recommendations = await generateDonationMatches(
+      donation as any,
+      formattedApplications
+    );
+
+    // Store recommendations in donation_matches table
+    const matchRecords = recommendations.map((rec) => ({
+      donation_id: donationId,
+      application_id: rec.application_id,
+      school_id: rec.school_id,
+      match_score: rec.match_score,
+      match_justification: rec.match_justification,
+      priority_rank: rec.priority_rank,
+      status: "pending_admin_allocation",
+    }));
+
+    // Delete existing recommendations for this donation
+    await adminClient
+      .from("donation_matches")
+      .delete()
+      .eq("donation_id", donationId);
+
+    // Insert new recommendations
+    const { error: insertError } = await adminClient
+      .from("donation_matches")
+      .insert(matchRecords);
+
+    if (insertError) {
+      console.error("Error storing match recommendations:", insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    return { success: true, matches: recommendations };
+  } catch (error) {
+    console.error("Error generating match recommendations:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function allocateDonationToSchool(
+  matchId: string,
+  adminNotes?: string
+) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    // Verify admin role
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const adminClient = createAdminClient();
+
+    // Get match details
+    const { data: match, error: matchError } = await adminClient
+      .from("donation_matches")
+      .select("*, donations(*)")
+      .eq("id", matchId)
+      .single();
+
+    if (matchError || !match) {
+      return { success: false, error: "Match not found" };
+    }
+
+    // Update match status to allocated
+    const { error: updateMatchError } = await adminClient
+      .from("donation_matches")
+      .update({
+        status: "allocated_by_admin",
+        allocated_by: user.id,
+        allocated_at: new Date().toISOString(),
+        admin_notes: adminNotes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", matchId);
+
+    if (updateMatchError) {
+      console.error("Error updating match:", updateMatchError);
+      return { success: false, error: updateMatchError.message };
+    }
+
+    // Update donation to show it's allocated (pending approver confirmation)
+    const { error: donationError } = await adminClient
+      .from("donations")
+      .update({
+        allocated_to: match.school_id,
+        allocated_at: new Date().toISOString(),
+        status: "allocated",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", match.donation_id);
+
+    if (donationError) {
+      console.error("Error updating donation:", donationError);
+      return { success: false, error: donationError.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error allocating donation:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function getMatchRecommendations(donationId: string) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    // Verify admin role
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const adminClient = createAdminClient();
+
+    const { data: matches, error } = await adminClient
+      .from("donation_matches")
+      .select(`
+        *,
+        resource_applications (
+          application_title,
+          application_type,
+          priority_level,
+          current_situation,
+          expected_impact
+        ),
+        schools:school_id (
+          school_name,
+          province,
+          district,
+          total_students
+        )
+      `)
+      .eq("donation_id", donationId)
+      .order("priority_rank", { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, matches: matches || [] };
+  } catch (error) {
+    console.error("Error fetching match recommendations:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

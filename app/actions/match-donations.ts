@@ -42,53 +42,58 @@ export async function generateMatchRecommendations(donationId: string) {
     // Fetch all submitted/approved applications from schools
     const { data: applications, error: applicationsError } = await adminClient
       .from("resource_applications")
-      .select(`
-        *,
-        schools:school_id (
-          id,
-          school_name,
-          province,
-          district,
-          total_students,
-          total_teachers,
-          students_requiring_meals,
-          has_electricity,
-          has_running_water,
-          has_library,
-          classroom_condition
-        )
-      `)
+      .select("*")
       .in("status", ["submitted", "under_review", "approved"]);
 
     if (applicationsError || !applications || applications.length === 0) {
       return { success: false, error: "No applications found to match" };
     }
 
-    // Transform data for AI matching
-    const formattedApplications = applications.map((app: any) => ({
-      id: app.id,
-      application_title: app.application_title,
-      application_type: app.application_type,
-      priority_level: app.priority_level,
-      resources_needed: app.resources_needed,
-      current_situation: app.current_situation,
-      expected_impact: app.expected_impact,
-      beneficiaries_count: app.beneficiaries_count,
-      needed_by_date: app.needed_by_date,
-      school: {
-        id: app.schools.id,
-        school_name: app.schools.school_name,
-        province: app.schools.province,
-        district: app.schools.district,
-        total_students: app.schools.total_students,
-        total_teachers: app.schools.total_teachers,
-        students_requiring_meals: app.schools.students_requiring_meals,
-        has_electricity: app.schools.has_electricity,
-        has_running_water: app.schools.has_running_water,
-        has_library: app.schools.has_library,
-        classroom_condition: app.schools.classroom_condition,
-      },
-    }));
+    // Fetch school details separately (school_id = profiles.id = schools.id)
+    const schoolIds = [...new Set(applications.map(app => app.school_id))];
+    const { data: schools, error: schoolsError } = await adminClient
+      .from("schools")
+      .select("*")
+      .in("id", schoolIds);
+
+    if (schoolsError) {
+      return { success: false, error: "Error fetching school details" };
+    }
+
+    // Create a map of schools by ID for quick lookup
+    const schoolsMap = new Map(schools?.map(school => [school.id, school]) || []);
+
+    // Transform data for AI matching, combining applications with school data
+    const formattedApplications = applications.map((app: any) => {
+      const school = schoolsMap.get(app.school_id);
+      if (!school) {
+        console.warn(`School not found for application ${app.id}`);
+      }
+      return {
+        id: app.id,
+        application_title: app.application_title,
+        application_type: app.application_type,
+        priority_level: app.priority_level,
+        resources_needed: app.resources_needed,
+        current_situation: app.current_situation,
+        expected_impact: app.expected_impact,
+        beneficiaries_count: app.beneficiaries_count,
+        needed_by_date: app.needed_by_date,
+        school: school ? {
+          id: school.id,
+          school_name: school.school_name,
+          province: school.province,
+          district: school.district,
+          total_students: school.total_students,
+          total_teachers: school.total_teachers,
+          students_requiring_meals: school.students_requiring_meals,
+          has_electricity: school.has_electricity,
+          has_running_water: school.has_running_water,
+          has_library: school.has_library,
+          classroom_condition: school.classroom_condition,
+        } : null,
+      };
+    }).filter(app => app.school !== null); // Only include applications with valid school data
 
     // Generate AI-powered match recommendations
     const recommendations = await generateDonationMatches(
@@ -238,6 +243,7 @@ export async function getMatchRecommendations(donationId: string) {
 
     const adminClient = createAdminClient();
 
+    // Fetch matches with related application data
     const { data: matches, error } = await adminClient
       .from("donation_matches")
       .select(`
@@ -248,12 +254,6 @@ export async function getMatchRecommendations(donationId: string) {
           priority_level,
           current_situation,
           expected_impact
-        ),
-        schools:school_id (
-          school_name,
-          province,
-          district,
-          total_students
         )
       `)
       .eq("donation_id", donationId)
@@ -263,7 +263,30 @@ export async function getMatchRecommendations(donationId: string) {
       return { success: false, error: error.message };
     }
 
-    return { success: true, matches: matches || [] };
+    if (!matches || matches.length === 0) {
+      return { success: true, matches: [] };
+    }
+
+    // Fetch school details separately
+    const schoolIds = [...new Set(matches.map(m => m.school_id))];
+    const { data: schools, error: schoolsError } = await adminClient
+      .from("schools")
+      .select("school_name, province, district, total_students, id")
+      .in("id", schoolIds);
+
+    if (schoolsError) {
+      console.error("Error fetching schools:", schoolsError);
+      return { success: true, matches }; // Return matches without school data
+    }
+
+    // Merge school data into matches
+    const schoolsMap = new Map(schools?.map(s => [s.id, s]) || []);
+    const enrichedMatches = matches.map(match => ({
+      ...match,
+      schools: schoolsMap.get(match.school_id),
+    }));
+
+    return { success: true, matches: enrichedMatches };
   } catch (error) {
     console.error("Error fetching match recommendations:", error);
     return {

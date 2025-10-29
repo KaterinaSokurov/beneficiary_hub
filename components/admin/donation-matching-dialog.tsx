@@ -238,7 +238,7 @@ export function DonationMatchingDialog({
                     <p className="text-sm flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
                       <span className="text-yellow-800">
-                        This allocation will be sent to an approver for final confirmation to prevent bias.
+                        This allocation will be sent to an approver for final confirmation
                       </span>
                     </p>
                   </div>

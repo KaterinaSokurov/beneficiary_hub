@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { sendHandoverNotificationEmail } from "@/lib/email-service";
 
 export interface HandoverSchedule {
   scheduledDate: string;
@@ -40,16 +41,48 @@ export async function approveMatch(
 
     const adminClient = createAdminClient();
 
-    // Get match details
+    // Get match details with related donation, donor, and school information
     const { data: match, error: matchError } = await adminClient
       .from("donation_matches")
-      .select("*")
+      .select(`
+        *,
+        donations (
+          title,
+          donor_id,
+          donors (
+            full_name,
+            email
+          )
+        )
+      `)
       .eq("id", matchId)
       .eq("status", "allocated_by_admin")
       .single();
 
     if (matchError || !match) {
       return { success: false, error: "Match not found or not ready for approval" };
+    }
+
+    // Get school details separately
+    const { data: school, error: schoolError } = await adminClient
+      .from("schools")
+      .select("school_name, id")
+      .eq("id", match.school_id)
+      .single();
+
+    if (schoolError || !school) {
+      return { success: false, error: "School not found" };
+    }
+
+    // Get school profile for email
+    const { data: schoolProfile, error: schoolProfileError } = await adminClient
+      .from("profiles")
+      .select("email")
+      .eq("id", match.school_id)
+      .single();
+
+    if (schoolProfileError || !schoolProfile) {
+      return { success: false, error: "School profile not found" };
     }
 
     const now = new Date().toISOString();
@@ -108,6 +141,44 @@ export async function approveMatch(
       console.error("Error updating application:", applicationError);
       return { success: false, error: applicationError.message };
     }
+
+    // Extract donor information
+    const donation = match.donations as any;
+    const donor = Array.isArray(donation?.donors) ? donation.donors[0] : donation?.donors;
+
+    if (!donor || !donation) {
+      console.error("Missing donor or donation information for email");
+      return { success: true }; // Still return success as DB operations completed
+    }
+
+    // Send handover notification emails to both donor and school
+    const handoverDetails = {
+      donationTitle: donation.title,
+      schoolName: school.school_name,
+      date: handoverSchedule.scheduledDate,
+      time: handoverSchedule.scheduledTime,
+      venue: handoverSchedule.venue,
+      venueAddress: handoverSchedule.venueAddress,
+      contactPerson: handoverSchedule.contactPerson,
+      contactPhone: handoverSchedule.contactPhone,
+      notes: handoverSchedule.handoverNotes,
+    };
+
+    // Send email to donor
+    await sendHandoverNotificationEmail(
+      donor.email,
+      donor.full_name,
+      "donor",
+      handoverDetails
+    );
+
+    // Send email to school
+    await sendHandoverNotificationEmail(
+      schoolProfile.email,
+      school.school_name,
+      "school",
+      handoverDetails
+    );
 
     return { success: true };
   } catch (error) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { sendDonationApprovalEmail, sendDonationRejectionEmail } from "@/lib/email-service";
 
 export async function approveDonation(donationId: string) {
   try {
@@ -26,6 +27,26 @@ export async function approveDonation(donationId: string) {
       return { success: false, error: "Unauthorized" };
     }
 
+    // Get donation and donor details for email
+    const { data: donation, error: fetchError } = await adminClient
+      .from("donations")
+      .select(`
+        title,
+        donor_id,
+        donors (
+          full_name,
+          email
+        )
+      `)
+      .eq("id", donationId)
+      .single();
+
+    if (fetchError || !donation || !donation.donors) {
+      return { success: false, error: "Donation or donor not found" };
+    }
+
+    const donor = Array.isArray(donation.donors) ? donation.donors[0] : donation.donors;
+
     // Update donation status
     const { error: updateError } = await adminClient
       .from("donations")
@@ -40,6 +61,13 @@ export async function approveDonation(donationId: string) {
       console.error("Error approving donation:", updateError);
       return { success: false, error: updateError.message };
     }
+
+    // Send approval email to donor
+    await sendDonationApprovalEmail(
+      donor.email,
+      donor.full_name,
+      donation.title
+    );
 
     return { success: true };
   } catch (error) {
@@ -79,6 +107,26 @@ export async function rejectDonation(donationId: string, rejectionReason: string
       return { success: false, error: "Rejection reason is required" };
     }
 
+    // Get donation and donor details for email
+    const { data: donation, error: fetchError } = await adminClient
+      .from("donations")
+      .select(`
+        title,
+        donor_id,
+        donors (
+          full_name,
+          email
+        )
+      `)
+      .eq("id", donationId)
+      .single();
+
+    if (fetchError || !donation || !donation.donors) {
+      return { success: false, error: "Donation or donor not found" };
+    }
+
+    const donor = Array.isArray(donation.donors) ? donation.donors[0] : donation.donors;
+
     // Update donation status
     const { error: updateError } = await adminClient
       .from("donations")
@@ -94,6 +142,14 @@ export async function rejectDonation(donationId: string, rejectionReason: string
       console.error("Error rejecting donation:", updateError);
       return { success: false, error: updateError.message };
     }
+
+    // Send rejection email to donor
+    await sendDonationRejectionEmail(
+      donor.email,
+      donor.full_name,
+      donation.title,
+      rejectionReason
+    );
 
     return { success: true };
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { generateDonationMatches } from "@/lib/ai-matching-service";
+import { sendDonationAllocationEmail } from "@/lib/email-service";
 
 export async function generateMatchRecommendations(donationId: string) {
   try {
@@ -188,15 +189,42 @@ export async function allocateDonationToSchool(
 
     const adminClient = createAdminClient();
 
-    // Get match details
+    // Get match details with donation info
     const { data: match, error: matchError } = await adminClient
       .from("donation_matches")
-      .select("*, donations(*)")
+      .select(`
+        *,
+        donations (
+          title
+        )
+      `)
       .eq("id", matchId)
       .single();
 
     if (matchError || !match) {
       return { success: false, error: "Match not found" };
+    }
+
+    // Get school details for email
+    const { data: school, error: schoolError } = await adminClient
+      .from("schools")
+      .select("school_name, id")
+      .eq("id", match.school_id)
+      .single();
+
+    if (schoolError || !school) {
+      return { success: false, error: "School not found" };
+    }
+
+    // Get school profile for email
+    const { data: schoolProfile, error: schoolProfileError } = await adminClient
+      .from("profiles")
+      .select("email")
+      .eq("id", match.school_id)
+      .single();
+
+    if (schoolProfileError || !schoolProfile) {
+      return { success: false, error: "School profile not found" };
     }
 
     // Update match status to allocated
@@ -230,6 +258,17 @@ export async function allocateDonationToSchool(
     if (donationError) {
       console.error("Error updating donation:", donationError);
       return { success: false, error: donationError.message };
+    }
+
+    // Send allocation notification email to school
+    const donation = match.donations as any;
+    if (donation && schoolProfile.email && school.school_name) {
+      await sendDonationAllocationEmail(
+        schoolProfile.email,
+        school.school_name,
+        donation.title,
+        match.match_score
+      );
     }
 
     return { success: true };

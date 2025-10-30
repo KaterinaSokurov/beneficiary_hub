@@ -57,8 +57,10 @@ export async function enrollUser(data: EnrollUserData) {
       .eq("id", newUser.user.id)
       .single();
 
+    const now = new Date().toISOString();
+
     if (!existingProfile) {
-      // Create the profile
+      // Create the profile with COMPLETE initialization
       const { error: insertError } = await adminClient
         .from("profiles")
         .insert({
@@ -66,7 +68,16 @@ export async function enrollUser(data: EnrollUserData) {
           email: data.email,
           role: data.role,
           full_name: data.full_name,
+          phone_number: data.phone_number,
           is_active: true,
+          // IMPORTANT: Set verification fields for admin/approver accounts
+          is_verified: true,                    // ✅ Admin/Approver are pre-verified
+          verification_status: "approved",      // ✅ Mark as approved
+          verified_by: user.id,                 // ✅ Enrolling admin is the verifier
+          verified_at: now,                     // ✅ Set verification timestamp
+          created_by: user.id,                  // ✅ Record who created this account
+          created_at: now,
+          updated_at: now,
         });
 
       if (insertError) {
@@ -74,13 +85,20 @@ export async function enrollUser(data: EnrollUserData) {
         return { success: false, error: insertError.message };
       }
     } else {
-      // Update the existing profile with the role and name
+      // Update the existing profile with COMPLETE fields
       const { error: updateError } = await adminClient
         .from("profiles")
         .update({
           role: data.role,
           full_name: data.full_name,
+          phone_number: data.phone_number,
           is_active: true,
+          // IMPORTANT: Set verification fields for admin/approver accounts
+          is_verified: true,                    // ✅ Admin/Approver are pre-verified
+          verification_status: "approved",      // ✅ Mark as approved
+          verified_by: user.id,                 // ✅ Enrolling admin is the verifier
+          verified_at: now,                     // ✅ Set verification timestamp
+          updated_at: now,
         })
         .eq("id", newUser.user.id);
 

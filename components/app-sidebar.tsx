@@ -11,7 +11,6 @@ import {
   CheckCircle,
   FileText,
   Settings,
-  BarChart3,
   HelpCircle,
   Package,
 } from "lucide-react";
@@ -52,7 +51,6 @@ export function AppSidebar({
         },
         { title: "Donations", url: "/admin/donations", icon: Package },
         { title: "User Management", url: "/admin/users", icon: Users },
-        { title: "Reports", url: "/admin/reports", icon: BarChart3 },
       ],
       approver: [
         { title: "Dashboard", url: "/approver", icon: LayoutDashboard },

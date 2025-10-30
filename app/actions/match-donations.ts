@@ -118,17 +118,40 @@ export async function generateMatchRecommendations(donationId: string) {
       .delete()
       .eq("donation_id", donationId);
 
-    // Insert new recommendations
-    const { error: insertError } = await adminClient
+    // Insert new recommendations and get them back with IDs
+    const { data: insertedMatches, error: insertError } = await adminClient
       .from("donation_matches")
-      .insert(matchRecords);
+      .insert(matchRecords)
+      .select();
 
-    if (insertError) {
+    if (insertError || !insertedMatches) {
       console.error("Error storing match recommendations:", insertError);
-      return { success: false, error: insertError.message };
+      return { success: false, error: insertError?.message || "Failed to store matches" };
     }
 
-    return { success: true, matches: recommendations };
+    // Fetch school details for the inserted matches
+    const matchSchoolIds = [...new Set(insertedMatches.map(m => m.school_id))];
+    const { data: matchSchools } = await adminClient
+      .from("schools")
+      .select("school_name, province, district, total_students, id")
+      .in("id", matchSchoolIds);
+
+    const { data: matchApplications } = await adminClient
+      .from("resource_applications")
+      .select("application_title, application_type, priority_level, current_situation, expected_impact, id")
+      .in("id", insertedMatches.map(m => m.application_id));
+
+    // Enrich matches with school and application data
+    const matchSchoolsMap = new Map(matchSchools?.map(s => [s.id, s]) || []);
+    const matchAppsMap = new Map(matchApplications?.map(a => [a.id, a]) || []);
+
+    const enrichedMatches = insertedMatches.map(match => ({
+      ...match,
+      schools: matchSchoolsMap.get(match.school_id),
+      resource_applications: matchAppsMap.get(match.application_id),
+    }));
+
+    return { success: true, matches: enrichedMatches };
   } catch (error) {
     console.error("Error generating match recommendations:", error);
     return {

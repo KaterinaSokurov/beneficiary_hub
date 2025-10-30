@@ -227,6 +227,7 @@ export async function getPendingMatches() {
 
     const adminClient = createAdminClient();
 
+    // Fetch matches with donations, applications, and allocated_by profile
     const { data: matches, error } = await adminClient
       .from("donation_matches")
       .select(`
@@ -251,14 +252,6 @@ export async function getPendingMatches() {
           expected_impact,
           beneficiaries_count
         ),
-        schools:school_id (
-          school_name,
-          province,
-          district,
-          total_students,
-          head_teacher_name,
-          head_teacher_phone
-        ),
         allocated_by_profile:allocated_by (
           full_name,
           email
@@ -271,7 +264,30 @@ export async function getPendingMatches() {
       return { success: false, error: error.message };
     }
 
-    return { success: true, matches: matches || [] };
+    if (!matches || matches.length === 0) {
+      return { success: true, matches: [] };
+    }
+
+    // Fetch school details separately
+    const schoolIds = [...new Set(matches.map(m => m.school_id))];
+    const { data: schools, error: schoolsError } = await adminClient
+      .from("schools")
+      .select("school_name, province, district, total_students, head_teacher_name, head_teacher_phone, id")
+      .in("id", schoolIds);
+
+    if (schoolsError) {
+      console.error("Error fetching schools:", schoolsError);
+      return { success: true, matches }; // Return matches without school data
+    }
+
+    // Merge school data into matches
+    const schoolsMap = new Map(schools?.map(s => [s.id, s]) || []);
+    const enrichedMatches = matches.map(match => ({
+      ...match,
+      schools: schoolsMap.get(match.school_id),
+    }));
+
+    return { success: true, matches: enrichedMatches };
   } catch (error) {
     console.error("Error fetching pending matches:", error);
     return {

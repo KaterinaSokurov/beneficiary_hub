@@ -151,13 +151,13 @@ export function DonationMatchingDialog({
               <div className="space-y-3">
                 {matches.map((match: any) => (
                   <Card
-                    key={match.id || match.application_id}
+                    key={match.id}
                     className={`cursor-pointer transition-all ${
-                      selectedMatch === (match.id || match.application_id)
+                      selectedMatch === match.id
                         ? "ring-2 ring-primary shadow-lg"
                         : "hover:shadow-md"
                     }`}
-                    onClick={() => setSelectedMatch(match.id || match.application_id)}
+                    onClick={() => setSelectedMatch(match.id)}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -165,7 +165,7 @@ export function DonationMatchingDialog({
                           <CardTitle className="flex items-center gap-2 text-lg">
                             <School className="h-4 w-4 text-primary" />
                             {match.schools?.school_name || match.school_name}
-                            {selectedMatch === (match.id || match.application_id) && (
+                            {selectedMatch === match.id && (
                               <CheckCircle className="h-5 w-5 text-primary" />
                             )}
                           </CardTitle>

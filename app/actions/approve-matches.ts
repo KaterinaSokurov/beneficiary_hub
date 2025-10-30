@@ -41,18 +41,14 @@ export async function approveMatch(
 
     const adminClient = createAdminClient();
 
-    // Get match details with related donation, donor, and school information
+    // Get match details with related donation information
     const { data: match, error: matchError } = await adminClient
       .from("donation_matches")
       .select(`
         *,
         donations (
           title,
-          donor_id,
-          donors (
-            full_name,
-            email
-          )
+          donor_id
         )
       `)
       .eq("id", matchId)
@@ -61,6 +57,33 @@ export async function approveMatch(
 
     if (matchError || !match) {
       return { success: false, error: "Match not found or not ready for approval" };
+    }
+
+    // Get donor details separately (donors table + profiles for email)
+    const donation = match.donations as any;
+    if (!donation || !donation.donor_id) {
+      return { success: false, error: "Donation information not found" };
+    }
+
+    const { data: donor, error: donorError } = await adminClient
+      .from("donors")
+      .select("full_name, id")
+      .eq("id", donation.donor_id)
+      .single();
+
+    if (donorError || !donor) {
+      return { success: false, error: "Donor not found" };
+    }
+
+    // Get donor email from profiles table
+    const { data: donorProfile, error: donorProfileError } = await adminClient
+      .from("profiles")
+      .select("email")
+      .eq("id", donation.donor_id)
+      .single();
+
+    if (donorProfileError || !donorProfile) {
+      return { success: false, error: "Donor profile not found" };
     }
 
     // Get school details separately
@@ -142,15 +165,6 @@ export async function approveMatch(
       return { success: false, error: applicationError.message };
     }
 
-    // Extract donor information
-    const donation = match.donations as any;
-    const donor = Array.isArray(donation?.donors) ? donation.donors[0] : donation?.donors;
-
-    if (!donor || !donation) {
-      console.error("Missing donor or donation information for email");
-      return { success: true }; // Still return success as DB operations completed
-    }
-
     // Send handover notification emails to both donor and school
     const handoverDetails = {
       donationTitle: donation.title,
@@ -164,21 +178,29 @@ export async function approveMatch(
       notes: handoverSchedule.handoverNotes,
     };
 
-    // Send email to donor
-    await sendHandoverNotificationEmail(
-      donor.email,
+    // Send email to donor using profile email
+    const donorEmailResult = await sendHandoverNotificationEmail(
+      donorProfile.email,
       donor.full_name,
       "donor",
       handoverDetails
     );
 
+    if (!donorEmailResult.success) {
+      console.error("Failed to send donor email:", donorEmailResult.error);
+    }
+
     // Send email to school
-    await sendHandoverNotificationEmail(
+    const schoolEmailResult = await sendHandoverNotificationEmail(
       schoolProfile.email,
       school.school_name,
       "school",
       handoverDetails
     );
+
+    if (!schoolEmailResult.success) {
+      console.error("Failed to send school email:", schoolEmailResult.error);
+    }
 
     return { success: true };
   } catch (error) {
